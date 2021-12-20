@@ -104,6 +104,62 @@ exports("ZoneType", function(Zone)
 end)
 --
 
+RegisterNetEvent('vehicle:flipit')
+AddEventHandler('vehicle:flipit', function()
+    local ped = PlayerPedId()
+    local coords = GetEntityCoords(ped)
+    local vehicle = nil
+    if IsPedInAnyVehicle(ped, false) then vehicle = GetVehiclePedIsIn(ped, false) else vehicle = GetClosestVehicle(coords.x, coords.y, coords.z, 5.0, 0, 71) end
+        if DoesEntityExist(vehicle) then
+        exports['progressbar']:Progress({
+            name = "flipping_vehicle",
+            duration = 5000,
+            label = "Flipping Vehicle Over",
+            useWhileDead = false,
+            canCancel = true,
+            controlDisables = {
+                disableMovement = true,
+                disableCarMovement = true,
+                disableMouse = false,
+                disableCombat = true,
+            },
+            animation = {
+                animDict = "random@mugging4",
+                anim = "struggle_loop_b_thief",
+                flags = 49,
+            }
+        }, function(status)
+
+            local playerped = PlayerPedId()
+            local coordA = GetEntityCoords(playerped, 1)
+            local coordB = GetOffsetFromEntityInWorldCoords(playerped, 0.0, 100.0, 0.0)
+            local targetVehicle = getVehicleInDirection(coordA, coordB)
+            SetVehicleOnGroundProperly(targetVehicle)
+        end)
+    else
+        QBCore.Functions.Notify('No vehicle nearby.', 'error')
+    end
+end)
+
+function getVehicleInDirection(coordFrom, coordTo)
+    local offset = 0
+    local rayHandle
+    local vehicle
+
+    for i = 0, 100 do
+        rayHandle = CastRayPointToPoint(coordFrom.x, coordFrom.y, coordFrom.z, coordTo.x, coordTo.y, coordTo.z + offset, 10, PlayerPedId(), 0)    
+        a, b, c, d, vehicle = GetRaycastResult(rayHandle)
+        offset = offset - 1
+
+        if vehicle ~= 0 then break end
+    end
+    
+    local distance = Vdist2(coordFrom, GetEntityCoords(vehicle))
+    
+    if distance > 25 then vehicle = nil end
+    return vehicle ~= nil and vehicle or 0
+end
+
 function setupSubItems()
     QBCore.Functions.GetPlayerData(function(PlayerData)
         if PlayerData.metadata["isdead"] then
@@ -122,71 +178,12 @@ function setupSubItems()
         else
             if Config.JobInteractions[PlayerData.job.name] ~= nil and next(Config.JobInteractions[PlayerData.job.name]) ~= nil then
                 Config.MenuItems[4].items = Config.JobInteractions[PlayerData.job.name]
-<<<<<<< HEAD
-            else 
-=======
             else
->>>>>>> e8437c3cbcb1f2dd8a090bc2ee17f4d7f996718c
                 Config.MenuItems[4].items = {}
             end
         end
     end)
 
-<<<<<<< HEAD
-    RegisterNetEvent('qb-radialmenu:client:flipvehicle', function()
-        local ped = PlayerPedId()
-        local coords = GetEntityCoords(ped)
-        local vehicle = GetClosestVehicle(coords.x, coords.y, coords.z, 5.0, 0, 71)
-        if DoesEntityExist(vehicle) then
-            exports['progressbar']:Progress({
-                name = "flipping_vehicle",
-                duration = 5000,
-                label = "Fliping Vehicle...",
-                useWhileDead = false,
-                canCancel = true,
-                controlDisables = {
-                    disableMovement = true,
-                    disableCarMovement = true,
-                    disableMouse = false,
-                    disableCombat = true,
-                },
-                animation = {
-                    animDict = "random@mugging4",
-                    anim = "struggle_loop_b_thief",
-                    flags = 49,
-                }
-            }, function(status)
-                SetVehicleOnGroundProperly(vehicle)
-            end)
-        else
-            QBCore.Functions.Notify('No vehicle nearby', 'error', 2500) 
-        end
-    end)
-
-    if Config.GiveKeyMenu then
-        RegisterNetEvent('vehiclekeys:client:GiveKeys', function(target)
-            local Vehicle, VehDistance = QBCore.Functions.GetClosestVehicle()
-            local plate = QBCore.Functions.GetPlate(Vehicle, true)
-            local Player, Distance = GetClosestPlayer()
-            if Vehicle ~= -1 and Player ~= 0 and VehDistance < 2.3 then
-                if Player ~= -1 and Player ~= 0 and Distance < 2.3 then
-                    TriggerServerEvent('vehiclekeys:server:GiveVehicleKeys', plate, GetPlayerServerId(Player))
-                else
-                    QBCore.Functions.Notify('No one nearby', 'error')
-                end
-            else
-                QBCore.Functions.Notify('No vehicle nearby', 'error')
-            end
-        end)
-    else
-        RegisterNetEvent('vehiclekeys:client:GiveKeys', function(target)
-            local plate = QBCore.Functions.GetPlate(GetVehiclePedIsIn(PlayerPedId(), true))
-            TriggerServerEvent('vehiclekeys:server:GiveVehicleKeys', plate, target)
-        end)
-    end
-
-=======
->>>>>>> e8437c3cbcb1f2dd8a090bc2ee17f4d7f996718c
     local Vehicle = GetVehiclePedIsIn(PlayerPedId())
 
     if Vehicle ~= nil or Vehicle ~= 0 then
@@ -432,7 +429,7 @@ RegisterNetEvent('qb-radialmenu:client:openDoor', function(data)
 
     if closestVehicle ~= 0 then
         if closestVehicle ~= GetVehiclePedIsIn(ped) then
-            local plate = QBCore.Functions.GetPlate(closestVehicle)
+            local plate = GetVehicleNumberPlateText(closestVehicle)
             if GetVehicleDoorAngleRatio(closestVehicle, door) > 0.0 then
                 if not IsVehicleSeatFree(closestVehicle, -1) then
                     TriggerServerEvent('qb-radialmenu:trunk:server:Door', false, plate, door)
@@ -465,7 +462,7 @@ RegisterNetEvent('qb-radialmenu:client:setExtra', function(data)
     local ped = PlayerPedId()
     local veh = GetVehiclePedIsIn(ped)
     if veh ~= nil then
-        local plate = QBCore.Functions.GetPlate(closestVehicle)
+        local plate = GetVehicleNumberPlateText(closestVehicle)
         if GetPedInVehicleSeat(veh, -1) == PlayerPedId() then
             SetVehicleAutoRepairDisabled(veh, true) -- Forces Auto Repair off when Toggling Extra [GTA 5 Niche Issue]
             if DoesExtraExist(veh, extra) then
